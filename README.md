@@ -1,94 +1,128 @@
-# EchoMem
-> Private On-Device Jarvis-Style AI Memory Assistant
+# EchoMem — Privacy-First Local Memory Assistant
 
-*Private repository — do not distribute.*
+> *It remembers, so you don't have to. Fully offline. Fully yours.*
 
----
+EchoMem is a voice-controlled personal memory assistant that runs **100% locally**
+on your laptop — no cloud, no GPU, no data ever leaves the machine. It passively
+captures your screen, extracts semantic summaries into encrypted storage, and
+lets you ask questions like *"When did I last work on the login page?"* or
+*"What did that Slack message from Priya say?"* by voice.
 
-## What is EchoMem?
-
-EchoMem is a fully offline, Jarvis-style personal voice assistant that lives on your laptop. It pays attention to what you see and hear (intelligently, not blindly), remembers everything permanently in encrypted local storage, activates with your own custom wake word, answers questions about your activity in natural voice, performs safe OS actions on confirmed command, and can personalize itself to you — all without ever sending a byte of data online.
-
-- 🔒 **100% local, zero cloud** — no API keys, no telemetry, hard network block
-- 🧠 **Smart intelligent capture** — filters private content and idle screens before saving
-- 🗣️ **Custom-named voice assistant** — wake word, assistant name, and voice are user-defined (pick anything; default examples: Raven, Lyra, or your own name)
-- 🔐 **Three-factor unlock** — system biometric + voiceprint + optional face/eye (auto-detected if webcam) + secondary master password
-- 💾 **Permanent memory** — years of memories in ~650MB on disk, flat ~600MB idle RAM
-- ⚙️ **Safe OS control** — open apps, set reminders, send approved messages (all confirmed, nothing destructive)
-- 🧪 **Opt-in personalization** — private on-device QLoRA fine-tuning (default off)
-- 🖥️ **Siri-style minimal UI** — sliding overlay, tray menu, no bloated dashboard
-- 💻 **Runs on 6GB+ laptops** — no GPU required, Eco/Balanced/Performance profiles
-- 🧑‍🤝‍🧑 **Built by a 3-person team, no fixed roles** — shared ownership of every component
+This is our **final-year B.E. project** at Ajeenkya DY Patil University, Dept. of
+Computer Science and Engineering, Pune. Team of 3. Target submission: **October
+2026** (6-week MVP, paper + live demo).
 
 ---
 
-## Current Status
+## What's in v1 (the October submission)
 
-**Phase: Foundations & Proposal (Week 1)**
+- Wake-word activation (`Hey Echo`, customisable) — openWakeWord
+- Speech-to-text — faster-whisper tiny.en
+- Screen capture with content-change detection (pHash) + Windows app/title context
+- On-device visual captioning + privacy gate (drop passwords/OTP/banking) — Moondream2 1.8B Q4
+- Semantic search over memory — bge-small-en-v1.5 + LanceDB
+- Answer synthesis — **Qwen2.5-0.5B-instruct Q4** (fits in 8GB CPU)
+- Voice responses — Piper TTS
+- AES-256-GCM at-rest encryption, single master password on launch
+- React + Tailwind dark chat UI served on localhost
+- FastAPI backend, hard localhost-only networking
+- 6–8 page research paper + live demo
 
-| Milestone | Status | Target |
-|-----------|--------|--------|
-| Project proposal | 🟡 Draft | Week 1 |
-| MVP (capture → embed → search) | ⚪ | Week 5 |
-| AI pipeline (Whisper + Moondream + Phi) | ⚪ | Week 8 |
-| Smart capture & privacy gate | ⚪ | Week 10 |
-| Encrypted permanent memory | ⚪ | Week 11 |
-| Jarvis voice UX + 3-factor unlock | ⚪ | Week 12 |
-| Personalization + UI polish | ⚪ | Week 14 |
-| Final v1.0 + research paper | ⚪ | Month 12 |
+## What's in the repo but NOT in v1 (Future Work, see `docs/process/FUTURE_WORK.md`)
 
----
+Every originally planned feature is still in the architecture and module
+skeleton. The following are documented, partially stubbed, and scheduled for
+*after* October submission:
 
-## Repository Structure
+- 3-factor graduated unlock (voiceprint + anti-replay challenge + master password)
+- Face + eye-blink optional webcam unlock
+- QLoRA personalisation adapter with DP-SGD
+- OS actions (open apps, control volume/brightness, approved messages)
+- Continuous ambient audio capture (screen-only in v1)
+- Cross-platform support (Windows is the demo target for v1)
+- 3 performance profiles (Eco/Balanced/Performance)
+- Envelope encryption + per-day key rotation + block reshuffling + mlock
+- IVF-PQ vector index (flat brute-force in v1)
+- pystray tray icon, guest mode, native installers
+- Cinematic demo video
 
-```
-echomem-final/
-├── backend/            # FastAPI backend (Python 3.11)
-│   ├── capture/        # Screen + audio capture
-│   ├── models/         # AI model wrappers (Whisper, Moondream2, Phi, Piper, wake word, voiceprint, face recognition)
-│   ├── storage/        # Encrypted LanceDB + SQLite + sharded file store
-│   ├── retrieval/      # Hybrid search + tiered memory router + summarization
-│   ├── privacy/        # Encryption, PII redaction, network block, key management
-│   ├── actions/        # Safe OS actions (open apps, reminders, approved messages)
-│   ├── unlock/         # System auth, voiceprint, face+eye biometric, master password
-│   └── api/            # FastAPI routes
-├── frontend/           # React + Vite + Tailwind (Siri-style overlay + tray popover)
-│   └── src/
-├── models/             # Quantized model files (gitignored; downloaded via setup script)
-├── data/               # Local encrypted user data (gitignored)
-├── docs/
-│   ├── product/        # PRD, user stories, privacy model
-│   ├── process/        # Roadmap, team guidelines, contributing, setup
-│   └── adr/            # Architecture Decision Records
-├── paper/              # LaTeX source for the research paper
-├── scripts/            # Setup, benchmark, dev scripts
-└── tests/              # Unit + integration tests
-```
+See [`docs/process/SCOPE_V1.md`](docs/process/SCOPE_V1.md) for the exact scope
+contract and [`docs/process/FUTURE_WORK.md`](docs/process/FUTURE_WORK.md) for
+the post-submission roadmap.
 
 ---
 
-## Quick Start (Development)
-
-Prerequisites: Python 3.11, Node 20+, Git, Ollama
+## Quick start (dev)
 
 ```bash
-git clone <private-repo-url>
-cd echomem-final
+# 1. One-time setup (creates venv, installs backend + frontend deps)
 bash scripts/setup.sh
+
+# 2. Pull local models via Ollama (~1.5GB total for v1)
+bash scripts/pull_models.sh
+
+# 3. Run backend
+cd backend && source ../.venv/bin/activate     # Windows: .venv\Scripts\activate
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+# 4. Run frontend (new terminal)
+cd frontend && npm run dev                     # opens http://localhost:5173
 ```
 
-See [`docs/process/SETUP.md`](docs/process/SETUP.md) for full instructions.
+Open http://localhost:5173, set your master password, and say **"Hey Echo"**.
 
----
+## Hardware targets (v1)
 
-## Documentation
+| Spec | Minimum | Recommended |
+|---|---|---|
+| RAM | 6 GB | 8 GB |
+| CPU | Any modern x86/ARM (2018+) | 4+ cores |
+| GPU | **Not required** | Optional, unused in v1 |
+| Disk | ~3 GB for models + code | + ~500 MB/year data |
+| OS | Windows 10/11 (demo target) | macOS 12+ / Ubuntu 20.04+ (post-v1) |
+| Mic | Built-in laptop mic | Any |
 
-| Purpose | Link |
-|---------|------|
-| Product requirements | [`docs/product/PRD.md`](docs/product/PRD.md) |
-| Roadmap & milestones | [`docs/process/ROADMAP.md`](docs/process/ROADMAP.md) |
-| Team process & guidelines | [`docs/process/TEAM.md`](docs/process/TEAM.md) |
-| Contributing workflow | [`docs/process/CONTRIBUTING.md`](docs/process/CONTRIBUTING.md) |
-| Code of conduct | [`docs/process/CODE_OF_CONDUCT.md`](docs/process/CODE_OF_CONDUCT.md) |
-| Setup guide | [`docs/process/SETUP.md`](docs/process/SETUP.md) |
-| Architecture decisions | [`docs/adr/`](docs/adr/) |
+## Repository layout
+
+```
+backend/        FastAPI app + modules (capture/, models/, storage/, retrieval/,
+                privacy/, actions/, unlock/, api/)
+frontend/       React + Vite + TypeScript + Tailwind chat UI
+scripts/        setup.sh, pull_models.sh
+models/         (gitignored) local Ollama/Piper/Whisper weights
+data/db/        (gitignored) LanceDB + SQLite live data
+paper/          LaTeX source for the research paper
+docs/
+  product/      PRD
+  process/      TEAM, ROADMAP, SCOPE_V1, FUTURE_WORK, SETUP, CONTRIBUTING, COC
+  technical/    SRS, ARCHITECTURE, API, THREAT_MODEL, UI_UX, TESTING
+  adr/          Architecture Decision Records
+  meetings/     Weekly meeting notes
+.github/        PR + issue templates
+```
+
+## Team process
+
+- Trunk-based branching; short-lived feature branches; pair/mob programming only
+- No individual module ownership — rotate sprint drivers weekly
+- **Friday demo every week**, even if half-broken
+- Feature freeze after Week 4; Week 5 = evaluation; Week 6 = paper + rehearsal
+- Read [`docs/process/TEAM.md`](docs/process/TEAM.md) and
+  [`docs/process/CONTRIBUTING.md`](docs/process/CONTRIBUTING.md)
+
+## Research paper
+
+Target: department submission (Oct 2026), then a demo/late-breaking track (ACM
+COMPASS, ACM India student symposiums, or arXiv preprint). Angle:
+> *A privacy-first personal memory assistant can run fully offline on an 8 GB
+> CPU-only laptop using quantized open-source models, with sub-10-second query
+> latency and encrypted at-rest storage. We quantify trade-offs via a 100-question
+> memory benchmark on real user data.*
+
+See [`paper/`](paper/) for the LaTeX skeleton (added Week 2).
+
+## License
+
+**Private during FYP development** (see `LICENSE-private.md`). Open-source
+licensing decision (MIT) will be made *after* October submission, in
+consultation with our guide.

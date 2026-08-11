@@ -1,54 +1,52 @@
-# Contributing
+# Contributing (internal, private repo)
 
-Because this is a private team repo for a final-year project, "contributors" are the three team members; this guide is the shared workflow.
+Since this is a 3-person FYP repo, "contributing" means *us*. This document
+exists so we have one shared way of working. There are no external
+contributors until after October submission (if we MIT-license it then).
 
-## Getting Started
-1. Clone the private repo
-2. Run `bash scripts/setup.sh` (creates venv, installs deps for backend and frontend)
-3. Pull models: `bash scripts/pull_models.sh` (Whisper, Moondream, Phi-3.5, Piper voices, wakeword, voiceprint)
-4. Create a branch: `git checkout -b feature/<your-feature>`
-5. Make changes, write tests, open a PR
+## Branching
 
-## Branch Naming
-- `feature/<short-name>` — new features
-- `fix/<short-name>` — bug fixes
-- `docs/<short-name>` — documentation / paper
-- `chore/<short-name>` — tooling, deps, build
-- `experiment/<short-name>` — ML experiments / ablation
+- `main` is always deployable / demoable.
+- Work on short branches named `w<N>-<short-description>`, e.g. `w1-screen-capture`.
+- Rebase on `main` before opening a PR; no long-lived branches.
+- After merge, delete the branch.
+
+## Pull requests
+
+- PRs are small (≤ 400 lines of code if possible). Big changes split into stacks.
+- Title: `<area>: <imperative summary>`.
+- Description: what changed, how to test, screenshots for UI changes.
+- At least one other team member must approve before merge.
+- CI is not set up in v1 (post-v1 nice-to-have); run the smoke tests in
+  `tests/test_smoke.py` locally before requesting review.
 
 ## Commits
-Conventional Commits:
-- `feat: add voiceprint enrollment flow`
-- `fix: prevent double-capture on window focus`
-- `docs: update PRD memory tier section`
-- `chore: bump Ollama client version`
-- `paper: add quantization ablation table`
 
-## Pull Requests
-- PRs target `main`
-- Fill in PR template (description, testing steps, checklist)
-- At least one other team member must review and approve
-- CI (lint + tests) must pass (once CI is enabled)
-- Squash merge on approval
+- Use imperative present tense: "add pHash dedup", not "added" or "adds".
+- First line ≤ 72 chars. Optional body after blank line.
+- One logical change per commit. No mega-commits.
 
-## Code Style
-- **Python:** Black formatter, Ruff linter, type hints on public functions, Google-style docstrings
-- **TypeScript/React:** Prettier, ESLint, strict TypeScript, functional components
-- No commented-out dead code on `main`
-- No secrets, no user data, no model files committed
+## Code style
 
-## Testing
-- Write unit tests for every new backend module in `/tests/`
-- Add integration tests for end-to-end flows (capture → storage → answer)
-- Run `pytest` before opening a PR
+- Python: Black formatted, Ruff-clean. Line length 100. Types on public functions.
+- TypeScript: strict mode on; Prettier/ESLint defaults from Vite template.
+- No commented-out code on `main`. Delete it; git remembers.
+- No secrets, API keys, personal data, or screenshot files committed. The
+  `.gitignore` already excludes `data/`, `models/`, `.venv/`, `node_modules/`.
 
-## Issues
-- Use GitHub Issues with templates for bugs, features, and research/experiments
-- Estimate size (S/M/L) when filing
-- Each sprint starts by picking issues off the backlog
+## Issue etiquette
 
-## Security
-- Do not commit encryption keys, passwords, or real user data
-- All real test data from team laptops goes into `data/` which is gitignored
-- Do not paste real credentials or private conversations into issues/PR descriptions
-- The project is private — do not share repo URL or screenshots externally without team consent
+- Every bug / feature gets a GitHub issue.
+- Label: `P0` (blocks demo), `P1` (breaks main flow), `P2` (polish), `P3` (later),
+  plus `week-1…week-6`.
+- Assign yourself when you start. Unassign if you get stuck > 2 hours.
+- Close issues with a linked PR ("Closes #12").
+
+## Friday demos
+
+End of every week, before the guide meeting:
+1. All open PRs merged or reverted
+2. `main` runs on all three laptops
+3. Demo script (see `TESTING.md` §2) runs end-to-end on the demo laptop
+4. Meeting notes pushed to `docs/meetings/YYYY-MM-DD.md` with: what shipped,
+   what broke, what's next week.

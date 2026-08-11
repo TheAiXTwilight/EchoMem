@@ -1,0 +1,173 @@
+% EchoMem — LaTeX paper skeleton (v1)
+% Target format: 6-8 pages. We'll switch to the exact conference class
+% (ACM/IEEE) once we know the department's required template post-submission.
+% For now we use acmart sigconf-style preamble because it compiles widely
+% and is easy to swap.
+\documentclass[sigconf,anonymous=false]{acmart}
+ % If acmart isn't installed locally, use \documentclass{article} temporarily
+ % and switch back when submitting.
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\title{EchoMem: A Privacy-First, Fully Offline Personal Memory Assistant for Commodity Laptops}
+
+\author{Team Member 1}
+\affiliation{\institution{Ajeenkya DY Patil University, Pune}\department{Department of Computer Science and Engineering}\city{Pune}\country{India}}
+\author{Team Member 2}
+\affiliation{\institution{Ajeenkya DY Patil University, Pune}}
+\author{Team Member 3}
+\affiliation{\institution{Ajeenkya DY Patil University, Pune}}
+
+\begin{document}
+
+\begin{abstract}
+We present \emph{EchoMem}, a voice-controlled personal memory assistant that
+runs fully offline on a commodity 8 GB CPU-only laptop with no GPU and no cloud
+dependency. EchoMem passively captures screen activity, applies a local vision
+language model to produce semantic captions and a privacy gate that drops
+sensitive content (passwords, banking, OTP, incognito) before anything is
+written to disk, encrypts all retained memories with AES-256-GCM under a user
+master password, and lets users retrieve prior activity via natural-language
+voice or text queries answered by a small quantized large language model. We
+quantify retrieval accuracy, latency, and privacy-gate effectiveness on a
+100-question personal-memory benchmark captured by the authors. To our
+knowledge EchoMem is the first open personal memory assistant that combines
+on-device multimodal perception, zero outbound network traffic, and strong
+at-rest encryption on hardware students already own.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+% TODO: ~1 page.
+% - The "where did I see X?" problem
+% - Limitations of existing tools (Windows Recall privacy concerns, Rewind AI
+%   cloud dependency, heavy hardware requirements)
+% - Our thesis: a fully offline, privacy-first memory assistant is feasible on
+%   commodity 8 GB CPU-only laptops using quantized open-source models
+% - Contributions bullet list: (1) system design, (2) privacy gate +
+%   encryption architecture, (3) open implementation, (4) empirical evaluation
+%   on a 100-question personal-memory benchmark.
+
+\section{Related Work}
+\label{sec:related}
+% TODO: ~1 page.
+% - Personal memory tools: Windows Recall, Rewind AI, Mem.ai, Google Photos
+%   memories, Apple Intelligence. Discuss privacy/cloud/hardware.
+% - On-device LLMs / VLMs: Ollama, llama.cpp, Moondream, Phi-3.5, Qwen2.5,
+%   Whisper.cpp, faster-whisper.
+% - Privacy-preserving personal AI: federated/personalized assistants,
+%   differential privacy for on-device fine-tuning (cite Opacus, DP-SGD).
+% - Voice interfaces: openWakeWord, Porcupine, Piper TTS.
+% - Gap we fill: end-to-end multimodal memory + encryption + zero network on
+%   student-grade hardware, with an empirical systems evaluation.
+
+\section{System Design}
+\label{sec:design}
+
+\subsection{Threat Model and Privacy Goals}
+% % TODO: subsection from docs/technical/threat-model/THREAT_MODEL.md
+% - No outbound trust
+% - Stolen-laptop safety
+% - Sensitive-content never hits disk
+
+\subsection{Architecture}
+% % TODO: ~1.5 pages total with diagram.
+% Figure: architecture diagram from ARCHITECTURE.md (redrawn in TikZ or draw.io→PDF)
+% Describe: UI (React), backend (FastAPI), capture (mss + pHash + window),
+% VLM caption+privacy (Moondream), embeddings (bge-small), vector store
+% (LanceDB), LLM (Qwen2.5-0.5B Q4), STT (faster-whisper tiny.en), TTS (Piper),
+% wake word (openWakeWord), encryption (AES-256-GCM, PBKDF2).
+
+\subsection{Capture Pipeline}
+% Screen capture cadence, pHash dedup, window context, VLM captioning.
+
+\subsection{Privacy Gate}
+% Regex blocklist + Moondream STORE/DROP verdict; decision-fusion logic.
+
+\subsection{Storage and Encryption}
+% SQLite metadata + LanceDB vectors + encrypted blob storage; v1 key
+% lifecycle; what is deferred (envelope encryption, mlock, per-day keys) is
+% listed honestly as future work.
+
+\subsection{Voice Query Pipeline}
+% Wake -> VAD -> STT -> embed -> retrieve -> prompt Qwen -> Piper TTS.
+
+\subsection{User Interface}
+% Dark chat UI on localhost; lock screen; citations.
+
+\section{Implementation}
+\label{sec:impl}
+% TODO: ~0.75 page.
+% - Tech stack (ADR 0003); Python 3.11 / FastAPI / React / Tailwind / Ollama
+% - Model sizes on disk and RAM budgets (Table 1)
+% - Platform support (Windows v1, Mac/Linux best-effort)
+% - Code availability: private during review; to be MIT-licensed after FYP
+%   submission, URL to be added.
+
+\section{Evaluation}
+\label{sec:eval}
+% TODO: ~1.5 pages.
+
+\subsection{Methodology}
+% 100-question benchmark construction, 3 users x 2 hours of real work each.
+% Privacy gate evaluation: 100 labelled screenshots (50 sensitive / 50 normal).
+% Latency: measured end-to-end on 8 GB Windows 11 laptop (specs).
+
+\subsection{Retrieval Accuracy}
+% Recall@5, Recall@10, MRR, answer-correctness 1-3 scale. Table 2.
+
+\subsection{Latency and Resource Usage}
+% Stage-by-stage latency breakdown (capture / caption / embed / retrieve /
+% LLM / TTS) plus idle and peak RAM and disk growth. Table 3.
+
+\subsection{Privacy Gate Effectiveness}
+% Confusion matrix; TP / FP / FN / TN; precision/recall. Discussion of failure
+% cases (e.g. banking site that looks like a normal page).
+
+\subsection{Wake Word Performance}
+% False accept rate across 8 hours of background audio per user.
+
+\section{Discussion and Limitations}
+\label{sec:disc}
+% TODO: ~0.5 page.
+% - Qwen 0.5B answer quality ceiling; plan for Phi-3.5 on 16 GB machines
+% - Single-password auth vs graduated multi-factor future work
+% - Windows-only demo in v1
+% - Regex + small VLM privacy gate is not perfect; learned gate + DP training
+%   future work
+% - No ambient audio memory in v1; screen-only captures miss meetings/calls.
+
+\section{Future Work}
+\label{sec:future}
+% TODO: 0.25 page. Bullet from FUTURE_WORK.md:
+% - 3-factor unlock (voiceprint with anti-replay, face+blink)
+% - QLoRA personalisation with DP-SGD
+% - OS actions
+% - Envelope encryption, mlock, block reshuffling
+% - Performance profiles (Eco/Balanced/Perf)
+% - Native installers and tray/guest modes
+% - Long-term semantic memory consolidation.
+
+\section{Conclusion}
+\label{sec:conc}
+% TODO: 0.25 page. Restate thesis; we showed it is possible to build a
+% credible privacy-first local memory assistant on hardware every student
+% already owns; we release the implementation to enable future on-device
+% memory research.
+
+\section*{Acknowledgements}
+% TODO: thank our guide, department, anyone who gave feedback.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+% Add citations as you go in paper/references.bib
+
+\end{document}

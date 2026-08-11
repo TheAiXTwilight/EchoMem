@@ -1,3 +1,4 @@
-.key
-.pages
-.pdf
+*.key
+*.pages
+*.pdf
+*.DS_Store

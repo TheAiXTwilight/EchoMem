@@ -1,28 +1,49 @@
-# ADR 0002: Encrypted Tiered Permanent Memory
+# ADR 0002 — Storage: SQLite + LanceDB, AES-256-GCM at Rest
 
-**Date:** 2026-07
-**Status:** Accepted
+- **Status:** Accepted (v1, simplified)
+- **Date:** 2026-08-12
 
 ## Context
-EchoMem must store years of user data (screenshots, audio, transcripts, embeddings, notes) on consumer laptops with 6GB+ RAM while ensuring no data is readable outside the running EchoMem process. Data must be searchable quickly, even across years, without loading everything into RAM.
+We need durable storage for: metadata (timestamps, app, title, file paths),
+vector embeddings (for semantic search), and encrypted binary blobs
+(screenshots/thumbnails). All of this must be unreadable without the user's
+password, fast to query on an 8 GB CPU laptop, and simple enough to implement
+in a few days.
 
-## Decision
-- **Encryption:** AES-256-GCM envelope encryption; per-day rotating data keys wrapped by a master key derived from user password + OS keychain secret via PBKDF2-HMAC-SHA256
-- **Sharding:** All data split into fixed 4KB blocks, padded, written with random UUID filenames in random shuffled order; a single encrypted per-day map file tracks block order
-- **Routine reshuffling:** 2-5% of blocks silently re-written with new positions on each launch
-- **Tiered memory:**
-  - Short-term (48h): full JPEG q=80 captures + Opus audio
-  - Long-term (90 days): WebP q=55 @1280px + summaries + thumbnails, raw audio deleted after transcription
-  - Archive (permanent): semantic triples + monthly summaries, PQ-compressed embeddings
-- **Storage engines:** LanceDB (vector, PQ-compressed IVF index) + SQLite FTS5 (metadata/keyword) + local filesystem for encrypted blocks
-- **Process hardening:** `mlock` for key pages, core dumps disabled, zeroization on lock/wipe, sealed keys only released to unmodified binary
-- **Outbound traffic:** hard block in backend (no sockets allowed except localhost)
+## Decision (v1)
+- **Metadata:** a single SQLite database (`echomem.db`) with a `memories` table:
+  `(id INTEGER PK, ts REAL, app TEXT, title TEXT, caption TEXT, img_path TEXT)`.
+- **Vectors:** LanceDB in embedded mode, flat index (no IVF-PQ compression),
+  storing `(id, vector 384d)`. At the scale of v1 (a few thousand to tens of
+  thousands of memories) brute-force search is <200 ms.
+- **Files:** encrypted WebP thumbnails (q=55, max 1280px) under `data/db/blobs/`
+  with random UUID filenames. Captions and image bytes encrypted with
+  AES-256-GCM using a PBKDF2-derived key (100k iterations).
+- **Key lifecycle for v1:** one master key, derived from password at unlock,
+  held in process memory, dropped on lock or exit.
 
 ## Consequences
-✅ Years of memory fit in ~650 MB of disk
-✅ Files on disk are indistinguishable from random noise without the master key
-✅ Idle RAM flat at ~600 MB regardless of data volume
-✅ Instant cryptographic wipe
-✅ Search across years <100 ms via PQ vector index
-⚠️ Requires careful key lifetime and rotation logic
-⚠️ Sealed-key binding is OS-specific (Windows Credential Manager / macOS Keychain / Linux Secret Service) — small platform-specific adapters needed
+- A stolen `data/db/` folder is useless without the password.
+- No keychain integration, no per-day key rotation, no envelope encryption, no
+  block reshuffling, no mlock in v1 — all deferred to post-v1.
+- Flat vector index is simple and correct; we will not hit scale issues on
+  day-one volumes. When users pass ~50k memories we will need IVF-PQ; that is a
+  post-v1 migration.
+
+## Alternatives considered
+- **ChromaDB / FAISS / Qdrant:** Chroma was too heavy, FAISS lacks a good
+  persistent serverless story, Qdrant requires a server process. LanceDB is
+  embedded, pip-installable, and works offline.
+- **Postgres + pgvector:** requires running a server; unnecessary for a
+  single-user app.
+- **Full encrypted at rest via OS (BitLocker/FileVault):** good and
+  recommended, but doesn't protect against an already-logged-in attacker, and
+  doesn't satisfy our "lock EchoMem independently" requirement. We still
+  recommend users enable BitLocker/FileVault.
+
+## Post-v1
+- Envelope encryption with per-day wrapped keys sealed to OS keychain
+- 4 KB fixed-size blocks with random UUID filenames and daily reshuffling
+- mlock-locked RAM pages, explicit memzero on lock
+- IVF-PQ vector index for scale
+- Long-term semantic triple store with nightly consolidation

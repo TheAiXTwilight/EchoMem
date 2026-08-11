@@ -1,35 +1,48 @@
-# ADR 0001: Quantized Local Models with On-Demand Loading
+# ADR 0001 — Quantized Local Models via Ollama for v1
 
-**Date:** 2026-07
-**Status:** Accepted
-**Deciders:** All team members
+- **Status:** Accepted (v1)
+- **Date:** 2026-08-12
 
 ## Context
-EchoMem must run multimodal AI (speech, vision, embeddings, LLM, wake word, voiceprint, face recognition) on consumer laptops (6–16 GB RAM, CPU-first, no required GPU), fully offline with zero cloud calls.
+EchoMem must run on 8 GB CPU-only Windows laptops with no GPU and no internet.
+We need STT, TTS, wake word, image captioning, embeddings, and a chat LLM —
+all simultaneously — while leaving headroom for OS + UI.
 
 ## Decision
-Use the following open-source quantized models, loaded on demand via Ollama/llama.cpp (only one heavy model in RAM at a time):
-
-| Task | Model | Size | Quantization |
-|------|-------|------|--------------|
-| Speech-to-text | faster-whisper / Whisper.cpp | 40 MB (tiny.en) / 142 MB (base.en) | Q4 |
-| Vision + privacy gate + captions | Moondream2 1.8B | 1.1 GB | Q4 GGUF |
-| Embeddings | bge-small-en-v1.5 (fastembed ONNX) | 140 MB | INT8 ONNX |
-| Answer synthesis | Phi-3.5-mini-instruct | 2.3 GB | Q4_K_M; Eco mode uses Qwen2.5-0.5B Q4 (400 MB) |
-| Voice output | Piper TTS (male + female) | ~80 MB total | — |
-| Wake word | openWakeWord | < 1 MB | — |
-| Voiceprint | SpeechBrain ECAPA-TDNN | 20 MB | — |
-| Face unlock (optional) | FaceNet (MTCNN + InceptionResnet) | 90 MB | — |
+- All large models run locally via **Ollama**, using **Q4_K_M quantisation**.
+- **v1 default LLM:** `qwen2.5:0.5b-instruct-q4_K_M` (~400 MB). It fits alongside
+  Moondream + Whisper + embeddings + TTS inside 8 GB RAM.
+- **VLM for captions + privacy:** `moondream:1.8b-instruct-q4_K_M` (~1.1 GB),
+  loaded only during the background capture loop, not during queries.
+- **Embeddings:** `bge-small-en-v1.5` via fastembed (ONNX, ~140 MB).
+- **STT:** `faster-whisper` with `tiny.en` (~40 MB).
+- **TTS:** Piper with `en_US-amy-medium` (~80 MB).
+- **Wake word:** `openWakeWord` (<1 MB).
 
 ## Consequences
-✅ Fits 6–8 GB RAM budgets
-✅ Fully offline, open-source, auditable
-✅ On-demand unloading (Ollama auto-unload) keeps idle RAM ~600 MB
-⚠️ Lower ceiling than cloud models (acceptable tradeoff for privacy/on-device)
-⚠️ Requires careful scheduling so multiple heavy models don't load simultaneously
+**Pros:**
+- Total model weights on disk ≈ 1.8 GB.
+- End-to-end answer latency on 8 GB CPU fits our ≤12s p95 target.
+- Install story is one script (`scripts/pull_models.sh`).
+- Ollama handles model loading, memory management, and GGUF runtime.
 
-## Alternatives Rejected
-- Cloud APIs (privacy violation, core premise broken)
-- Llama-3.1-8B Q4 (4.7 GB — too large for 6GB Eco profile)
-- Large VLMs (Qwen2-VL-7B) — too slow on CPU
-- Piper large voices — bigger, no quality gain worth the size
+**Cons / trade-offs:**
+- Qwen2.5-0.5B is not very smart. Answers will be mediocre. We accept this
+  for v1; the research contribution is the *system*, not the LLM quality.
+- We must unload Moondream from RAM before a big Qwen query if memory is tight
+  (Ollama does this automatically via keep-alive).
+- Model upgrades (Phi-3.5-mini, larger Whisper) move to post-v1.
+
+## Alternatives considered
+- **Phi-3.5-mini (2.3 GB default):** Better answers but pushes 8 GB machines
+  into swap during concurrent Moondream + Whisper. Deferred to post-v1 for
+  16 GB+ machines.
+- **Cloud APIs (OpenAI, Gemini, etc.):** Violates the privacy promise. Rejected.
+- **llama.cpp directly:** More control but more engineering overhead than Ollama
+  for a 6-week deadline. Rejected.
+- **Gemma-2-2B, Mistral-7B:** too large for our RAM budget.
+
+## Post-v1
+- Profile selector auto-upgrades to Phi-3.5-mini when RAM ≥ 10 GB free
+- Offer `base.en` / `small.en` Whisper for higher transcription accuracy
+- Explore Llama 3.2-Vision to unify caption + LLM into one model

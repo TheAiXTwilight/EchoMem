@@ -1,25 +1,29 @@
 {
-  "name": "echomem-frontend",
+  "name": "echomem-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "description": "EchoMem v1 chat UI (React + Vite + TS + Tailwind). Browser-only; localhost served.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5173",
+    "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.441.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.10",
+    "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.8"
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
   }
 }
