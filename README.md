@@ -120,9 +120,3 @@ COMPASS, ACM India student symposiums, or arXiv preprint). Angle:
 > memory benchmark on real user data.*
 
 See [`paper/`](paper/) for the LaTeX skeleton (added Week 2).
-
-## License
-
-**Private during FYP development** (see `LICENSE-private.md`). Open-source
-licensing decision (MIT) will be made *after* October submission, in
-consultation with our guide.
