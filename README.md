@@ -100,23 +100,3 @@ docs/
   meetings/     Weekly meeting notes
 .github/        PR + issue templates
 ```
-
-## Team process
-
-- Trunk-based branching; short-lived feature branches; pair/mob programming only
-- No individual module ownership — rotate sprint drivers weekly
-- **Friday demo every week**, even if half-broken
-- Feature freeze after Week 4; Week 5 = evaluation; Week 6 = paper + rehearsal
-- Read [`docs/process/TEAM.md`](docs/process/TEAM.md) and
-  [`docs/process/CONTRIBUTING.md`](docs/process/CONTRIBUTING.md)
-
-## Research paper
-
-Target: department submission (Oct 2026), then a demo/late-breaking track (ACM
-COMPASS, ACM India student symposiums, or arXiv preprint). Angle:
-> *A privacy-first personal memory assistant can run fully offline on an 8 GB
-> CPU-only laptop using quantized open-source models, with sub-10-second query
-> latency and encrypted at-rest storage. We quantify trade-offs via a 100-question
-> memory benchmark on real user data.*
-
-See [`paper/`](paper/) for the LaTeX skeleton (added Week 2).
