@@ -24,9 +24,8 @@ from capture.screen import ScreenCapture
 from capture.wake import WakeWordListener
 from storage.sqlite_store import SQLiteStore
 from storage.vector_store import VectorStore
-from models.captioner import Captioner
+from models.llm import LLM, Captioner           # Captioner (VLM) lives here
 from models.embedder import Embedder
-from models.llm import LLM
 from models.stt import STT
 from models.tts import TTS
 from privacy.gate import should_store
@@ -118,12 +117,12 @@ def health():
         "locked": state.locked,
         "capture_running": state.screen.running,
         "models": {
-            "stt": "faster-whisper-tiny.en",
-            "tts": "piper-en_US-amy-medium",
-            "captioner": "moondream:1.8b-instruct-q4_K_M",
-            "llm": "qwen2.5:0.5b-instruct-q4_K_M",
-            "embedder": "bge-small-en-v1.5",
-            "wake": "openwakeword",
+            "stt": "faster-whisper base.en INT8 (CTranslate2)",
+            "tts": "Kokoro-82M via pykokoro ONNX (voice af_heart)",
+            "multimodal": state.llm.model,
+            "captioner": state.captioner.model,
+            "embedder": "nomic-embed-text:v1.5",
+            "wake": "livekit-wakeword (Conv-Attention ONNX)",
         },
     }
 

@@ -23,24 +23,28 @@ the module stubs already created under `backend/`.
 - [x] **No ambient audio capture in v1.** Voice input happens *only* during an
       active wake-word → STT session.
 
-### 1.2 AI pipeline
-- [x] **Moondream2 1.8B-instruct Q4_K_M via Ollama** — called once per captured
-      frame:
-      1. Produces a 1–2 line plain-English **caption** of the screen.
-      2. Produces a binary **privacy verdict** (STORE / DROP) given the caption +
-         window title + a regex/keyword blocklist (password, banking, OTP,
-         incognito, credit card, adult).
-- [x] **bge-small-en-v1.5 via fastembed (ONNX)** — embeds captions into
-      384-dim vectors.
-- [x] **Qwen2.5-0.5B-instruct Q4_K_M via Ollama** — RAG answer synthesis given a
-      user question + top-k retrieved captions.
-- [x] **faster-whisper `tiny.en`** — STT for active voice queries.
-- [x] **Piper TTS** — one English voice (choice of male/female in settings) for
-      speaking answers back.
-- [x] **openWakeWord** — one custom wake phrase (default `Hey Echo`, user can
-      change in settings).
-- [x] *Moondream runs ONLY during capture (background), not during queries.
-      Qwen is the ONLY model loaded at query time. This is how we fit in 8 GB.*
+### 1.2 AI pipeline (v2 unified multimodal stack — Aug 18 2026)
+- [x] **Qwen3.5 natively-multimodal model via Ollama** (one model handles BOTH
+      vision and chat — no model swap, saves ~1.4 GB RAM):
+      - Floor (≤2 GB free / 6 GB laptops): **Qwen3.5 0.8B** (1.0 GB)
+      - Default (2–5 GB free / 8 GB Windows): **Qwen3.5 2B Q4_K_M** (1.9 GB)
+      - Premium (≥5 GB free / M-series Mac): **Qwen3.5 4B Q4_K_M** (3.4 GB)
+      - During capture: produces a 1–2 line plain-English **caption** of the screen
+        plus a binary **privacy verdict** (STORE/DROP) via caption text + regex/keyword
+        blocklist (password, banking, OTP, incognito, credit card, adult).
+      - During queries: same model does RAG answer synthesis given top-k captions.
+- [x] **nomic-embed-text:v1.5 via Ollama** — embeds captions into 768-dim vectors
+      (274 MB, 8192-token context, most-pulled Ollama embedder).
+- [x] **faster-whisper `base.en` INT8** (CTranslate2) — STT for voice queries;
+      142 MB, ~20× realtime on x86 CPU.
+- [x] **Kokoro-82M via pykokoro ONNX** — voice responses (Apache 2.0, 54 voices,
+      default af_heart female US; user picks male/female in settings).
+- [x] **livekit-wakeword** — custom wake phrase `Hey Echo` (100× fewer false
+      positives than openWakeWord; one-command ONNX training; user can change
+      phrase in settings).
+- [x] *Only ONE Ollama model (Qwen3.5) is resident at all times — no VLM eviction
+      window, no cold start, no RAM wasted holding two models. This is how we fit
+      in 8 GB with headroom.*
 
 ### 1.3 Storage & privacy
 - [x] **SQLite** for metadata (id, timestamp, app, title, caption,

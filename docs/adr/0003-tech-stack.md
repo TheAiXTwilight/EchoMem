@@ -11,8 +11,7 @@
 - **No Electron in v1.** UI runs in a browser tab at http://localhost:5173. We
   will tell users to bookmark it. A Tauri/Electron wrapper is post-v1 only if
   we have extra time.
-- **AI runtime:** Ollama for LLM + VLM; faster-whisper for STT; fastembed for
-  embeddings; Piper for TTS; openWakeWord for wake.
+- **AI runtime:** Ollama for the unified Qwen3.5 multimodal model (chat + vision + OCR in one) + nomic-embed-text embeddings; faster-whisper (CTranslate2 INT8) for STT; pykokoro (Kokoro-82M ONNX) for TTS; livekit-wakeword for wake-word detection.
 - **Storage:** SQLite + LanceDB (embedded, no server).
 - **OS target for v1:** Windows 10/11. macOS and Linux are best-effort for dev.
 - **Tests:** pytest + Vitest smoke tests only.
@@ -20,7 +19,7 @@
 
 ## Rationale
 - **Python** is the natural substrate for all the on-device AI libraries
-  (faster-whisper, Ollama Python client, fastembed, openWakeWord, Piper, mss,
+  (faster-whisper, Ollama Python client, pykokoro, livekit-wakeword, mss,
   sounddevice, cryptography). FastAPI is the simplest way to expose them as
   REST+WS with minimal code.
 - **React + Vite + TS + Tailwind** is the fastest path to a polished,

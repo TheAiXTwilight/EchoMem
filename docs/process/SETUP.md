@@ -27,7 +27,7 @@ Install these in order:
 git clone <your-private-repo-url> echomem
 cd echomem
 bash scripts/setup.sh          # Git Bash or WSL on Windows
-bash scripts/pull_models.sh    # pulls ~1.5GB of models via Ollama
+bash scripts/pull_models.sh    # pulls ~3.4–6.6 GB of models via Ollama (3 Qwen3.5 tiers + embeddings; phi4-mini optional)
 ```
 
 What `setup.sh` does:
@@ -73,7 +73,8 @@ curl http://127.0.0.1:8000/health
 
 # Models
 ollama list
-# Should include moondream:1.8b-instruct-q4_K_M and qwen2.5:0.5b-instruct-q4_K_M
+# Should include qwen3.5 tags pulled (0.8b, 2b-q4_K_M, 4b-q4_K_M) and nomic-embed-text:v1.5.
+# Backend auto-picks one Qwen3.5 tier based on free RAM (see docs/adr/0001-quantized-local-models.md).
 ```
 
 ## Editor config
@@ -84,9 +85,10 @@ hooks will be added only if time allows in the buffer week (post-v1 nice-to-have
 
 ## Troubleshooting
 
-- **Ollama out of memory**: close other apps; ensure you're using Qwen 0.5B, not Phi.
-- **sounddevice no device**: check mic permissions (Windows Settings → Privacy & Security → Microphone).
+- **Ollama out of memory**: close Chrome/VSCode; set ECHOMEM_MODEL=qwen3.5:0.8b to force the smallest tier.
+- **sounddevice no device**: check mic permissions (Windows Settings → Privacy & Security → Microphone); on Mac: `brew install portaudio`.
 - **mss black screen on Wayland (Linux)**: fall back to X11 for now; Wayland capture is post-v1.
 - **Port already in use**: ensure no other uvicorn/Vite process is running;
   change ports in `main.py` / `vite.config.ts` consistently.
-- **Piper download fails**: re-run `scripts/pull_models.sh`; models are small.
+- **pykokoro model download fails**: it auto-downloads ~80 MB voices from HuggingFace on first use; ensure `pip install "pykokoro[cpu]"` succeeded.
+- **livekit-wakeword ONNX training**: train `Hey Echo` via `livekit-wakeword run configs/hey_echo.yaml` (Week 3); the pre-trained `hey_livekit.onnx` works for smoke tests.

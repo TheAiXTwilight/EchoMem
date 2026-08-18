@@ -7,6 +7,13 @@ localhost build, not slides.
 See `SCOPE_V1.md` for exactly what's in/out of v1 and `FUTURE_WORK.md` for
 post-October work.
 
+**v2 note (Aug 18, 2026):** the AI stack was unified after a deep re-research
+pass. We now use ONE Qwen3.5 multimodal model for BOTH chat answers and
+screenshot captions/privacy OCR (one Ollama model, no swap, no VLM eviction).
+TTS is Kokoro-82M (pykokoro ONNX, Apache 2.0); wake word is livekit-wakeword;
+embeddings are nomic-embed-text:v1.5; STT is faster-whisper base.en INT8.
+See `docs/adr/0001-quantized-local-models.md`.
+
 ---
 
 ## Week 1 — Foundation (Aug 12–18)
@@ -15,26 +22,28 @@ Goal: every laptop can run the skeleton; screen capture + DB work.
 
 | Day | Task | Driver |
 |---|---|---|
-| Mon | Team meeting; freeze `SCOPE_V1.md`; sign §4 of SCOPE_V1. All 3 laptops run `scripts/setup.sh`. Verify FastAPI `/health` returns 200, React loads on `:5173`, Ollama runs Qwen + Moondream, Whisper transcribes a test WAV, Piper speaks. | All (mob) |
+| Mon | Team meeting; freeze `SCOPE_V1.md`; sign §4 of SCOPE_V1. All 3 laptops run `scripts/setup.sh`. Verify FastAPI `/health` returns 200, React loads on `:5173`, Ollama runs, Qwen3.5 responds to a test prompt, faster-whisper transcribes a test WAV, pykokoro speaks test audio. | All (mob) |
 | Tue | `backend/capture/screen.py`: mss screen-capture loop, screenshot to Pillow, pHash comparison, save to `data/captures/raw/`. | A |
 | Wed | `backend/capture/window.py`: Windows foreground app + window title via `pygetwindow`/`win32gui`; raise `NotImplementedError` on Mac/Linux. Wire into capture loop. | B |
 | Thu | `backend/storage/sqlite_store.py`: SQLite schema + insert/query; `GET /status`, `POST /capture/start`, `POST /capture/stop` endpoints on FastAPI. | C |
 | Fri | **Demo #1 to guide**: "We press Start, it records screen changes with app context into a local DB, for 2 minutes. We press Stop." Ugly is fine. Update ROADMAP with any guide feedback. Start literature survey doc. | All |
 
-Paper parallel: collect 15–20 refs (Windows Recall, Rewind AI, Mem, openWakeWord,
-faster-whisper, Ollama, on-device LLM systems, private personal assistants).
+Paper parallel: collect 15–20 refs (Windows Recall, Rewind AI, Mem,
+livekit-wakeword, faster-whisper / Whisper, Kokoro TTS, Ollama, on-device LLM
+systems, private personal assistants, Qwen3.5, nomic-embed-text).
 Draft paper section 1 (Intro) in `paper/`.
 
 ## Week 2 — AI Pipeline (Aug 19–25)
 
-Goal: screenshots → captions → embeddings → retrievable answers.
+Goal: screenshots → captions → embeddings → retrievable answers. All through
+ONE Qwen3.5 multimodal model (chat + vision) to avoid model-swap RAM issues.
 
 | Day | Task | Driver |
 |---|---|---|
-| Mon | `backend/models/captioner.py`: Moondream2 1.8B via Ollama — 1–2 line caption per frame. Include retry/timeout. | B |
-| Tue | `backend/privacy/gate.py`: caption + title → STORE/DROP. Moondream short verdict prompt + regex/keyword blocklist (password, banking, incognito, OTP, credit card, adult). Hand-test 50 sensitive vs 50 normal screenshots. | C |
-| Wed | `backend/models/embedder.py` (bge-small-en via fastembed) + `backend/storage/vector_store.py` (LanceDB, flat index, insert + query). `backend/retrieval/retriever.py`(question, top_k) → captions. | A |
-| Thu | `backend/models/llm.py`: Qwen2.5-0.5B RAG — system prompt + top-k context → answer. | B |
+| Mon | `backend/models/llm.py` (Captioner half): call Ollama `/api/generate` with model=self.model, images=[base64 frame], short system prompt → 1–2 line English caption per frame. Retry/timeout. (Same class is reused for chat later this week.) | B |
+| Tue | `backend/privacy/gate.py`: caption + title → STORE/DROP. VLM outputs `SENSITIVE_SCREEN` token OR regex/keyword blocklist (password, banking, OTP, incognito, credit card, adult) — either says DROP → DROP. Hand-test 50 sensitive vs 50 normal screenshots. | C |
+| Wed | `backend/models/embedder.py` (nomic-embed-text:v1.5 via Ollama `/api/embed`, 768-dim) + `backend/storage/vector_store.py` (LanceDB, flat index, insert + query). `backend/retrieval/retriever.py`(question, top_k) → captions. | A |
+| Thu | `backend/models/llm.py` (LLM half, same model): system prompt + top-k context → RAG answer. Ollama `/api/chat` call; Captioner and LLM point at same model tag. | B |
 | Fri | **Demo #2 in terminal**: pre-load 100 captured frames, type a question, get a reasonable answer with app + timestamp. | All |
 
 Paper parallel: finish section 2 (Related Work), draft section 3 (System
@@ -46,11 +55,11 @@ Goal: "Hey Echo, …" → answer spoken back; data encrypted at rest.
 
 | Day | Task | Driver |
 |---|---|---|
-| Mon | `backend/models/stt.py`: sounddevice + webrtcvad streaming to faster-whisper tiny.en. Return transcribed string. | C |
-| Tue | `backend/capture/wake.py`: openWakeWord listener in a background thread; triggers STT on wake; custom phrase configurable. | A |
-| Wed | `backend/models/tts.py`: Piper TTS enqueue + play via sounddevice; male/female voice switch. | B |
-| Thu | `backend/privacy/encryption.py`: password → PBKDF2 key → AES-256-GCM encrypt/decrypt screenshots + caption records. `POST /auth/unlock`, `POST /auth/lock` endpoints. App fails closed if locked. | C |
-| Fri | **Demo #3**: say "Hey Echo, when did I last open Chrome?" → wakes → transcribes → retrieves → answers out loud. Confirm DB file is unreadable without the password. | All |
+| Mon | `backend/models/stt.py`: sounddevice + webrtcvad streaming to faster-whisper base.en INT8. Return transcribed string. | C |
+| Tue | `backend/capture/wake.py`: livekit-wakeword listener (Conv-Attention ONNX) in a background thread; triggers STT on wake; train "Hey Echo" custom ONNX via `livekit-wakeword run configs/hey_echo.yaml`; custom phrase configurable. | A |
+| Wed | `backend/models/tts.py`: Kokoro-82M via pykokoro ONNX (voice=af_heart default); enqueue + play via sounddevice (24 kHz); male/female voice switch in settings. | B |
+| Thu | `backend/privacy/encryption.py`: password → PBKDF2 (100k iters) → AES-256-GCM encrypt/decrypt screenshots + caption records. `POST /auth/unlock`, `POST /auth/lock` endpoints. App fails closed if locked. | C |
+| Fri | **Demo #3**: say "Hey Echo, when did I last open Chrome?" → wakes → transcribes → retrieves → answers out loud via Kokoro. Confirm DB file is unreadable without the password. | All |
 
 Paper parallel: finish section 4 (Implementation) — libraries, model sizes,
 encryption, why these choices.

@@ -8,16 +8,18 @@ past activity by voice. v1 is the October 2026 FYP submission.
 
 ## 2. Scope
 See `docs/process/SCOPE_V1.md` for the binding scope contract. In short:
-screen-only capture, single master password, Qwen 0.5B LLM, Windows demo
-target, React chat UI on localhost.
+screen-only capture, single master password, unified Qwen3.5 multimodal model
+(chat + vision in one), Windows demo target, React chat UI on localhost.
 
 ## 3. Definitions
 - **Memory**: one caption + embedding + metadata (timestamp, app, title) for a
   captured screen moment.
 - **Locked**: ciphertext on disk, no in-memory key, no capture, no queries.
 - **Wake phrase**: custom voice phrase that triggers STT (default `Hey Echo`).
-- **Privacy gate**: decision (STORE/DROP) per captured frame based on Moondream
+- **Privacy gate**: decision (STORE/DROP) per captured frame based on the Qwen3.5
   VLM verdict + regex blocklist.
+- **Unified multimodal model**: single Qwen3.5 instance that does BOTH screen
+  captioning/privacy and RAG answer synthesis (no model swap, no wasted RAM).
 
 ## 4. Functional requirements
 
@@ -31,13 +33,15 @@ The system shall record the foreground application name and window title at
 capture time on Windows. On unsupported OS it shall record `null`.
 
 ### FR-3 Captioning
-Each stored frame shall be passed through a local VLM (Moondream2 1.8B Q4) to
-produce a 1–2 line English caption.
+Each stored frame shall be passed through the local Qwen3.5 multimodal model
+(auto-picked tier: 0.8B floor / 2B default / 4B premium) to produce a 1–2 line
+English caption.
 
 ### FR-4 Privacy gate
 Each frame shall be classified STORE or DROP. Frames classified DROP (passwords,
-OTP, banking, incognito, credit card, adult content per caption + title) shall
-be discarded immediately without being written to disk.
+OTP, banking, incognito, credit card, adult content per caption + title; either
+VLM outputs `SENSITIVE_SCREEN` or regex matches) shall be discarded immediately
+without being written to disk.
 
 ### FR-5 Encryption
 All persisted memories and screenshots shall be encrypted with AES-256-GCM
@@ -46,22 +50,25 @@ using a key derived from the user's master password via PBKDF2-HMAC-SHA256
 
 ### FR-6 Voice activation
 The system shall listen in the background for a configurable wake phrase via
-openWakeWord. Detection shall trigger STT.
+livekit-wakeword (Conv-Attention ONNX, custom-trained `Hey Echo` model).
+Detection shall trigger STT.
 
 ### FR-7 Speech-to-text
-Voice queries shall be transcribed via faster-whisper `tiny.en` running locally.
+Voice queries shall be transcribed via faster-whisper `base.en` INT8
+(CTranslate2, 142 MB, CPU-only).
 
 ### FR-8 Semantic retrieval
-Given a user query, the system shall embed it with bge-small-en-v1.5, retrieve
-the top-5 most semantically similar captions from LanceDB, and pass them to
-the LLM.
+Given a user query, the system shall embed it with nomic-embed-text:v1.5
+(768-dim, via Ollama), retrieve the top-5 most semantically similar captions
+from LanceDB, and pass them to the LLM.
 
 ### FR-9 Answer synthesis
-A local LLM (Qwen2.5-0.5B-instruct Q4) shall synthesise a natural-language
-answer citing which memories were used.
+The local Qwen3.5 multimodal model (same model used for captions) shall
+synthesise a natural-language answer citing which memories were used.
 
 ### FR-10 Text-to-speech
-Answers shall be spoken back via Piper TTS using a user-selectable voice.
+Answers shall be spoken back via Kokoro-82M (pykokoro ONNX, Apache 2.0,
+default voice `af_heart`) using a user-selectable voice.
 
 ### FR-11 UI
 A React dark-mode chat UI served on localhost shall expose: password unlock
@@ -92,7 +99,8 @@ shall zero in-memory key material and stop capture.
 ## 6. Out of scope (v1)
 See `docs/process/FUTURE_WORK.md` for the full deferred list including 3-factor
 unlock, voiceprint/face biometrics, QLoRA personalisation, OS actions,
-tray/guest modes, cross-platform installers, and the Phi-3.5 LLM upgrade.
+tray/guest modes, cross-platform installers, and larger-model upgrades for
+16+ GB machines.
 
 ## 7. Constraints
 - 3 CS undergrads, 6 weeks, ~540 person-hours total.

@@ -16,16 +16,19 @@ Computer Science and Engineering, Pune. Team of 3. Target submission: **October
 
 ## What's in v1 (the October submission)
 
-- Wake-word activation (`Hey Echo`, customisable) — openWakeWord
-- Speech-to-text — faster-whisper tiny.en
+- Wake-word activation (`Hey Echo`, customisable) — **livekit-wakeword** (100× fewer false positives than openWakeWord)
+- Speech-to-text — **faster-whisper base.en INT8** (CTranslate2, 142 MB, CPU)
 - Screen capture with content-change detection (pHash) + Windows app/title context
-- On-device visual captioning + privacy gate (drop passwords/OTP/banking) — Moondream2 1.8B Q4
-- Semantic search over memory — bge-small-en-v1.5 + LanceDB
-- Answer synthesis — **Qwen2.5-0.5B-instruct Q4** (fits in 8GB CPU)
-- Voice responses — Piper TTS
-- AES-256-GCM at-rest encryption, single master password on launch
+- **Unified multimodal model handles BOTH chat answers AND screenshot captioning/privacy OCR** — one Qwen3.5 model replaces separate chat LLM + VLM (saves RAM, no model swap)
+  - Floor (6 GB): Qwen3.5 0.8B (1.0 GB)
+  - Default (8 GB): **Qwen3.5 2B Q4_K_M (1.9 GB)**
+  - Premium (M2/M3 Mac): Qwen3.5 4B Q4_K_M (3.4 GB)
+- Privacy gate (drop passwords/OTP/banking/incognito) — VLM output + regex fusion
+- Semantic search over memory — **nomic-embed-text:v1.5** (274 MB) + LanceDB
+- Voice responses — **Kokoro-82M via pykokoro ONNX** (Apache 2.0, 54 voices, CPU)
+- AES-256-GCM at-rest encryption, single master password on launch (PBKDF2 100k iters)
 - React + Tailwind dark chat UI served on localhost
-- FastAPI backend, hard localhost-only networking
+- FastAPI backend, hard localhost-only networking (CORS locked to 127.0.0.1:5173)
 - 6–8 page research paper + live demo
 
 ## What's in the repo but NOT in v1 (Future Work, see `docs/process/FUTURE_WORK.md`)
@@ -58,7 +61,7 @@ the post-submission roadmap.
 # 1. One-time setup (creates venv, installs backend + frontend deps)
 bash scripts/setup.sh
 
-# 2. Pull local models via Ollama (~1.5GB total for v1)
+# 2. Pull local models via Ollama (~3.4 GB minimum, ~6.3 GB for all tiers)
 bash scripts/pull_models.sh
 
 # 3. Run backend

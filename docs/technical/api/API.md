@@ -20,12 +20,12 @@ Response:
   "locked": false,
   "capture_running": false,
   "models": {
-    "stt": "faster-whisper-tiny.en",
-    "tts": "piper-en_US-amy-medium",
-    "captioner": "moondream:1.8b-instruct-q4_K_M",
-    "llm": "qwen2.5:0.5b-instruct-q4_K_M",
-    "embedder": "bge-small-en-v1.5",
-    "wake": "openwakeword"
+    "stt": "faster-whisper base.en INT8 (CTranslate2)",
+    "tts": "Kokoro-82M via pykokoro ONNX (voice af_heart)",
+    "multimodal": "qwen3.5:2b-q4_K_M",
+    "captioner": "qwen3.5:2b-q4_K_M",
+    "embedder": "nomic-embed-text:v1.5",
+    "wake": "livekit-wakeword (Conv-Attention ONNX)"
   }
 }
 ```
@@ -60,7 +60,7 @@ Response (unlocked):
   "capture_running": true,
   "capture_interval_s": 3.0,
   "wake_phrase": "Hey Echo",
-  "llm": "qwen2.5:0.5b-instruct-q4_K_M"
+  "llm": "qwen3.5:2b-q4_K_M"
 }
 ```
 

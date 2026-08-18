@@ -61,11 +61,11 @@ at-rest encryption on hardware students already own.
 % TODO: ~1 page.
 % - Personal memory tools: Windows Recall, Rewind AI, Mem.ai, Google Photos
 %   memories, Apple Intelligence. Discuss privacy/cloud/hardware.
-% - On-device LLMs / VLMs: Ollama, llama.cpp, Moondream, Phi-3.5, Qwen2.5,
-%   Whisper.cpp, faster-whisper.
+% - On-device LLMs / VLMs: Ollama, llama.cpp, Qwen3.5 unified multimodal,
+%   nomic-embed-text, Whisper / faster-whisper, Kokoro TTS.
 % - Privacy-preserving personal AI: federated/personalized assistants,
 %   differential privacy for on-device fine-tuning (cite Opacus, DP-SGD).
-% - Voice interfaces: openWakeWord, Porcupine, Piper TTS.
+% - Voice interfaces: livekit-wakeword, Porcupine (commercial), openWakeWord, Kokoro TTS.
 % - Gap we fill: end-to-end multimodal memory + encryption + zero network on
 %   student-grade hardware, with an empirical systems evaluation.
 
@@ -82,15 +82,17 @@ at-rest encryption on hardware students already own.
 % % TODO: ~1.5 pages total with diagram.
 % Figure: architecture diagram from ARCHITECTURE.md (redrawn in TikZ or draw.io→PDF)
 % Describe: UI (React), backend (FastAPI), capture (mss + pHash + window),
-% VLM caption+privacy (Moondream), embeddings (bge-small), vector store
-% (LanceDB), LLM (Qwen2.5-0.5B Q4), STT (faster-whisper tiny.en), TTS (Piper),
-% wake word (openWakeWord), encryption (AES-256-GCM, PBKDF2).
+% Unified Qwen3.5 multimodal model for caption+privacy+answer, embeddings
+% (nomic-embed-text v1.5 via Ollama), vector store (LanceDB),
+% STT (faster-whisper base.en INT8), TTS (Kokoro-82M ONNX),
+% wake word (livekit-wakeword Conv-Attention ONNX),
+% encryption (AES-256-GCM, PBKDF2 100k iters).
 
 \subsection{Capture Pipeline}
 % Screen capture cadence, pHash dedup, window context, VLM captioning.
 
 \subsection{Privacy Gate}
-% Regex blocklist + Moondream STORE/DROP verdict; decision-fusion logic.
+% Regex blocklist + Qwen3.5 STORE/DROP verdict; decision-fusion logic (either says DROP -> DROP).
 
 \subsection{Storage and Encryption}
 % SQLite metadata + LanceDB vectors + encrypted blob storage; v1 key
@@ -98,7 +100,8 @@ at-rest encryption on hardware students already own.
 % listed honestly as future work.
 
 \subsection{Voice Query Pipeline}
-% Wake -> VAD -> STT -> embed -> retrieve -> prompt Qwen -> Piper TTS.
+% Wake (livekit-wakeword ONNX) -> VAD (webrtcvad) -> STT (faster-whisper base.en INT8)
+% -> embed (nomic-embed-text) -> retrieve (LanceDB flat) -> prompt Qwen3.5 -> Kokoro TTS.
 
 \subsection{User Interface}
 % Dark chat UI on localhost; lock screen; citations.
@@ -138,7 +141,7 @@ at-rest encryption on hardware students already own.
 \section{Discussion and Limitations}
 \label{sec:disc}
 % TODO: ~0.5 page.
-% - Qwen 0.5B answer quality ceiling; plan for Phi-3.5 on 16 GB machines
+% - Qwen3.5 2B answer quality ceiling; plan for larger Qwen3.5 tiers / Gemma 4 on 16 GB machines
 % - Single-password auth vs graduated multi-factor future work
 % - Windows-only demo in v1
 % - Regex + small VLM privacy gate is not perfect; learned gate + DP training
