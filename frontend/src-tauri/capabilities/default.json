@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default capability for the EchoMem overlay",
+  "windows": ["overlay"],
+  "permissions": ["core:default"]
+}

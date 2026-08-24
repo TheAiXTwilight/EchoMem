@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability for the EchoMem overlay","local":true,"windows":["overlay"],"permissions":["core:default"]}}
