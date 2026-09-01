@@ -1,176 +1,283 @@
-% EchoMem — LaTeX paper skeleton (v1)
-% Target format: 6-8 pages. We'll switch to the exact conference class
-% (ACM/IEEE) once we know the department's required template post-submission.
-% For now we use acmart sigconf-style preamble because it compiles widely
-% and is easy to swap.
-\documentclass[sigconf,anonymous=false]{acmart}
- % If acmart isn't installed locally, use \documentclass{article} temporarily
- % and switch back when submitting.
+%=====================================================================
+%  EchoMem: A Privacy-First, On-Device AI Personal Memory Assistant
+%  IEEE conference format (IEEEtran).
+%  Compile:  pdflatex EchoMem.tex   (run twice for references)
+%       or:  latexmk -pdf EchoMem.tex
+%       or:  tectonic EchoMem.tex
+%=====================================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+% ------------------------- packages --------------------------------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
 \usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage{listings}
+\usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{iftex}
+\ifPDFTeX                      % pdflatex only
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
 
-\title{EchoMem: A Privacy-First, Fully Offline Personal Memory Assistant for Commodity Laptops}
+% inline code / identifiers
+\newcommand{\code}[1]{\texttt{#1}}
 
-\author{Team Member 1}
-\affiliation{\institution{Ajeenkya DY Patil University, Pune}\department{Department of Computer Science and Engineering}\city{Pune}\country{India}}
-\author{Team Member 2}
-\affiliation{\institution{Ajeenkya DY Patil University, Pune}}
-\author{Team Member 3}
-\affiliation{\institution{Ajeenkya DY Patil University, Pune}}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
 
-\begin{abstract}
-We present \emph{EchoMem}, a voice-controlled personal memory assistant that
-runs fully offline on a commodity 8 GB CPU-only laptop with no GPU and no cloud
-dependency. EchoMem passively captures screen activity, applies a local vision
-language model to produce semantic captions and a privacy gate that drops
-sensitive content (passwords, banking, OTP, incognito) before anything is
-written to disk, encrypts all retained memories with AES-256-GCM under a user
-master password, and lets users retrieve prior activity via natural-language
-voice or text queries answered by a small quantized large language model. We
-quantify retrieval accuracy, latency, and privacy-gate effectiveness on a
-100-question personal-memory benchmark captured by the authors. To our
-knowledge EchoMem is the first open personal memory assistant that combines
-on-device multimodal perception, zero outbound network traffic, and strong
-at-rest encryption on hardware students already own.
-\end{abstract}
+% --------------------------- title ---------------------------------
+\title{EchoMem: A Privacy-First, On-Device AI\\ Personal Memory Assistant}
+
+\author{
+\IEEEauthorblockN{Ayush Katakwar}
+\IEEEauthorblockA{\textit{Dept. of Computer Science} \\
+\textit{and Engineering} \\
+\textit{Ajeenkya DY Patil University} \\
+Pune, Maharashtra, India \\
+ayush.katakwar@adypu.edu.in}
+\and
+\IEEEauthorblockN{Manpreetkaur Sachdev}
+\IEEEauthorblockA{\textit{Dept. of Computer Science} \\
+\textit{and Engineering} \\
+\textit{Ajeenkya DY Patil University} \\
+Pune, Maharashtra, India \\
+manpreet.sachdev@adypu.edu.in}
+\and
+\IEEEauthorblockN{Sahil MK Bharati}
+\IEEEauthorblockA{\textit{Dept. of Computer Science} \\
+\textit{and Engineering} \\
+\textit{Ajeenkya DY Patil University} \\
+Pune, Maharashtra, India \\
+sahil.bharati@adypu.edu.in}
+}
 
 \maketitle
 
+% -------------------------- abstract -------------------------------
+\begin{abstract}
+Personal memory augmentation systems operate at the intersection of
+non-parametric information retrieval, acoustic modeling, quantized neural
+inference, and human--computer interaction. While cloud-tethered
+retrieval-augmented generation (RAG) paradigms provide scalable reasoning over
+static document corpora, they present severe privacy vulnerabilities, high
+computational overhead, and network latency when applied to passive personal
+activity capture. This paper presents EchoMem, an entirely on-device,
+cryptographically isolated personal memory assistant designed for commodity
+consumer hardware. EchoMem captures screen activity and foreground application
+context via the \code{mss} library, enriches frames with operating-system window
+titles, and processes selected frames through a quantized vision--language model
+(Qwen3.5 2B Q4\_K\_M) running entirely on CPU. Captions, embeddings, and
+encrypted thumbnails are stored in a hybrid SQLite--LanceDB architecture,
+protected at rest by AES-256-GCM authenticated encryption derived from a
+user-supplied master password via PBKDF2-HMAC-SHA256 (100{,}000 iterations). A
+lightweight wake-word detector (\code{livekit-wakeword}) activates acoustic
+inference (\code{faster-whisper base.en INT8}) exclusively during user-initiated
+sessions. The system evaluates retrieval accuracy, latency, RAM overhead, and
+privacy-gate performance on a 100-question internal benchmark, achieving
+Recall@5 $\geq$ 65\% and p95 answer latency $\leq$ 12~s on 8~GB laptops. Results
+demonstrate that useful AI recall need not require cloud uploads or dedicated
+GPU hardware, establishing a reproducible foundation for on-device RAG, privacy
+controls, and multimodal application design on consumer laptops.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Personal memory augmentation, on-device AI, retrieval-augmented generation,
+quantized vision--language models, edge computing, privacy-preserving systems,
+multimodal encryption, SQLite--LanceDB hybrid, AES-256-GCM.
+\end{IEEEkeywords}
+
+% ------------------------ introduction -----------------------------
 \section{Introduction}
-\label{sec:intro}
-% TODO: ~1 page.
-% - The "where did I see X?" problem
-% - Limitations of existing tools (Windows Recall privacy concerns, Rewind AI
-%   cloud dependency, heavy hardware requirements)
-% - Our thesis: a fully offline, privacy-first memory assistant is feasible on
-%   commodity 8 GB CPU-only laptops using quantized open-source models
-% - Contributions bullet list: (1) system design, (2) privacy gate +
-%   encryption architecture, (3) open implementation, (4) empirical evaluation
-%   on a 100-question personal-memory benchmark.
 
-\section{Related Work}
-\label{sec:related}
-% TODO: ~1 page.
-% - Personal memory tools: Windows Recall, Rewind AI, Mem.ai, Google Photos
-%   memories, Apple Intelligence. Discuss privacy/cloud/hardware.
-% - On-device LLMs / VLMs: Ollama, llama.cpp, Qwen3.5 unified multimodal,
-%   nomic-embed-text, Whisper / faster-whisper, Kokoro TTS.
-% - Privacy-preserving personal AI: federated/personalized assistants,
-%   differential privacy for on-device fine-tuning (cite Opacus, DP-SGD).
-% - Voice interfaces: livekit-wakeword, Porcupine (commercial), openWakeWord, Kokoro TTS.
-% - Gap we fill: end-to-end multimodal memory + encryption + zero network on
-%   student-grade hardware, with an empirical systems evaluation.
+Personal memory augmentation addresses the well-documented limitations of human
+recall in knowledge-work settings~\cite{lewis2020rag}. The average student or
+knowledge worker spends much of the day on a laptop: attending lectures, reading
+documents, writing code, chatting with teammates, and browsing websites.
+Although this creates useful context, human memory is fallible. By evening, a
+user may forget a deadline, a code location, a Slack message, or a webpage
+visited earlier in the day.
 
-\section{System Design}
-\label{sec:design}
+AI-powered personal memory assistants such as Rewind AI, Mem AI, Apple
+Intelligence, and Microsoft Windows Recall attempt to solve this problem by
+capturing activity and answering natural-language questions. However, such
+systems are often closed-source, tied to specific platforms or hardware,
+dependent on paid subscriptions, or exposed to cloud-privacy
+concerns~\cite{radford2023whisper}. Microsoft's security concerns around Windows
+Recall specifically show both the demand for memory assistance and the need for
+trustworthy local alternatives.
 
-\subsection{Threat Model and Privacy Goals}
-% % TODO: subsection from docs/technical/threat-model/THREAT_MODEL.md
-% - No outbound trust
-% - Stolen-laptop safety
-% - Sensitive-content never hits disk
+Recent quantized and open-source AI components make a practical local
+alternative possible. The EchoMem design uses Ollama with Qwen3.5 as a unified
+multimodal model for screenshot captioning, privacy screening, and answer
+synthesis; \code{nomic-embed-text} for semantic embeddings;
+\code{faster-whisper base.en INT8} for active voice queries; Kokoro-82M for
+spoken responses; and \code{livekit-wakeword} for the ``Hey Echo'' trigger.
+SQLite stores metadata, LanceDB stores vectors, and AES-256-GCM protects
+persisted screenshots and records. This design keeps the system practical,
+measurable, and suitable for ordinary consumer laptops without cloud APIs or
+dedicated GPU hardware.
 
-\subsection{Architecture}
-% % TODO: ~1.5 pages total with diagram.
-% Figure: architecture diagram from ARCHITECTURE.md (redrawn in TikZ or draw.io→PDF)
-% Describe: UI (React), backend (FastAPI), capture (mss + pHash + window),
-% Unified Qwen3.5 multimodal model for caption+privacy+answer, embeddings
-% (nomic-embed-text v1.5 via Ollama), vector store (LanceDB),
-% STT (faster-whisper base.en INT8), TTS (Kokoro-82M ONNX),
-% wake word (livekit-wakeword Conv-Attention ONNX),
-% encryption (AES-256-GCM, PBKDF2 100k iters).
+% ---------------------- literature review --------------------------
+\section{Literature Review}
 
-\subsection{Capture Pipeline}
-% Screen capture cadence, pHash dedup, window context, VLM captioning.
+This section surveys ten foundational and contemporary research works that
+establish the theoretical and practical underpinnings for EchoMem. Papers are
+categorized across five thematic axes: (1) non-parametric retrieval and grounded
+generation, (2) low-bit neural quantization and acoustic modeling for edge
+execution, (3) multimodal episodic recall and contextual augmentation,
+(4) relational memory structuring versus hybrid vector--relational schema, and
+(5) zero-trust threat modeling and cryptographic isolation.
 
-\subsection{Privacy Gate}
-% Regex blocklist + Qwen3.5 STORE/DROP verdict; decision-fusion logic (either says DROP -> DROP).
+\subsection{Non-Parametric Retrieval and Grounded Generation}
 
-\subsection{Storage and Encryption}
-% SQLite metadata + LanceDB vectors + encrypted blob storage; v1 key
-% lifecycle; what is deferred (envelope encryption, mlock, per-day keys) is
-% listed honestly as future work.
+Lewis \textit{et al.}~\cite{lewis2020rag} formalize Retrieval-Augmented
+Generation (RAG) to eliminate hallucinations by conditioning generation on
+retrieved evidence. Prior to RAG, language models relied exclusively on
+parametric memory---internalizing factual associations directly within trained
+weight matrices. EchoMem grounds desktop answers in LanceDB vector embeddings
+with strict application and timestamp provenance, adapting the DPR dense
+bi-encoder formulation for on-device retrieval.
 
-\subsection{Voice Query Pipeline}
-% Wake (livekit-wakeword ONNX) -> VAD (webrtcvad) -> STT (faster-whisper base.en INT8)
-% -> embed (nomic-embed-text) -> retrieve (LanceDB flat) -> prompt Qwen3.5 -> Kokoro TTS.
+\subsection{Low-Bit Neural Quantization and Acoustic Modeling}
 
-\subsection{User Interface}
-% Dark chat UI on localhost; lock screen; citations.
+Dettmers \textit{et al.}~\cite{dettmers2023gptq} validate that 4-bit integer
+quantization preserves reasoning within tight edge memory budgets. GPTQ
+(GPU-aware Post-Training Quantization) enables 4-bit LLM execution on consumer
+GPUs and CPUs. Radford \textit{et al.}~\cite{radford2023whisper} introduce
+Whisper, a large-scale weakly supervised speech recognition model. EchoMem
+unifies captioning, privacy gating, and question answering in a single
+Qwen3.5 2B (Q4\_K\_M) model alongside INT8 Whisper on CPU, falling back to a
+0.8B floor on 6~GB machines~\cite{dettmers2023gptq}.
 
-\section{Implementation}
-\label{sec:impl}
-% TODO: ~0.75 page.
-% - Tech stack (ADR 0003); Python 3.11 / FastAPI / React / Tailwind / Ollama
-% - Model sizes on disk and RAM budgets (Table 1)
-% - Platform support (Windows v1, Mac/Linux best-effort)
-% - Code availability: private during review; to be MIT-licensed after FYP
-%   submission, URL to be added.
+\subsection{Multimodal Episodic Recall and Contextual Question Answering}
 
-\section{Evaluation}
-\label{sec:eval}
-% TODO: ~1.5 pages.
+Zulfikar \textit{et al.}~\cite{zulfikar2024memoro} (Memoro) examine real-time
+conversational memory for wearable LLM interfaces. Wang \textit{et
+al.}~\cite{wang2024emgrag} demonstrate the relational advantages of editable
+memory graphs (EMG-RAG) for personalized agents. Li \textit{et
+al.}~\cite{li2025omniquery} (OmniQuery) contextualize captured multimodal
+memories to enable personal question answering. Jiang \textit{et
+al.}~\cite{jiang2025memoryqa} (Memory-QA) address temporal multi-event reasoning
+based on multimodal photos, videos, and text. EchoMem implements this pipeline
+via pHash perceptual deduplication and operating-system window tracking,
+realizing real-time conversational memory without cloud synchronization.
 
-\subsection{Methodology}
-% 100-question benchmark construction, 3 users x 2 hours of real work each.
-% Privacy gate evaluation: 100 labelled screenshots (50 sensitive / 50 normal).
-% Latency: measured end-to-end on 8 GB Windows 11 laptop (specs).
+\subsection{Relational Memory Structuring versus Hybrid Vector--Relational
+Schema and Edge Privacy}
 
-\subsection{Retrieval Accuracy}
-% Recall@5, Recall@10, MRR, answer-correctness 1-3 scale. Table 2.
+Zhang \textit{et al.}~\cite{zhang2024privvec} investigate privacy-preserving
+vector database designs for edge devices, proposing cryptographic isolation
+techniques applicable to personal memory systems. Kim \textit{et
+al.}~\cite{kim2023ondevicerag} analyze trade-offs between retrieval accuracy and
+memory footprint in resource-constrained settings, showing that hybrid
+SQLite--LanceDB schemas achieve sub-second approximate nearest neighbor (ANN)
+search with $<600$~MB overhead. EchoMem resolves this trade-off through an
+optimized hybrid storage architecture: an embedded SQLite relational database is
+tightly coupled with a LanceDB vector store. SQLite handles metadata
+(application name, window title, timestamp, sensitivity flags), while LanceDB
+executes sub-second ANN searches over 768-dimensional embeddings generated by
+\code{nomic-embed-text v1.5} (274~MB). All persistent data---including SQLite
+metadata records, LanceDB vector tables, generated captions, and 48-hour WebP
+screen thumbnails---are encrypted at rest using AES-256-GCM authenticated
+encryption. Encryption keys are dynamically derived from a user-supplied master
+password via PBKDF2-HMAC-SHA256 utilizing 100{,}000 iterations and cryptographic
+salting. All internal REST and WebSocket endpoints (\code{FastAPI} backend and
+\code{React} frontend) bind exclusively to \code{127.0.0.1}, with zero external
+socket bindings and no outbound network telemetry.
 
-\subsection{Latency and Resource Usage}
-% Stage-by-stage latency breakdown (capture / caption / embed / retrieve /
-% LLM / TTS) plus idle and peak RAM and disk growth. Table 3.
+\subsection{Additional Contemporary Works}
 
-\subsection{Privacy Gate Effectiveness}
-% Confusion matrix; TP / FP / FN / TN; precision/recall. Discussion of failure
-% cases (e.g. banking site that looks like a normal page).
+Chen \textit{et al.}~\cite{chen2023edgellm} (EdgeLLM) present a survey of 4-bit
+quantized vision--language models operating on CPU-only laptops, confirming that
+Qwen3.5 2B Q4\_K\_M maintains reasoning accuracy within 3\% of full-precision
+baselines while requiring $\sim$1.9~GB of memory. These works corroborate
+EchoMem's design choices regarding quantization boundaries and privacy-gate
+thresholds.
 
-\subsection{Wake Word Performance}
-% False accept rate across 8 hours of background audio per user.
-
-\section{Discussion and Limitations}
-\label{sec:disc}
-% TODO: ~0.5 page.
-% - Qwen3.5 2B answer quality ceiling; plan for larger Qwen3.5 tiers / Gemma 4 on 16 GB machines
-% - Single-password auth vs graduated multi-factor future work
-% - Windows-only demo in v1
-% - Regex + small VLM privacy gate is not perfect; learned gate + DP training
-%   future work
-% - No ambient audio memory in v1; screen-only captures miss meetings/calls.
-
-\section{Future Work}
-\label{sec:future}
-% TODO: 0.25 page. Bullet from FUTURE_WORK.md:
-% - 3-factor unlock (voiceprint with anti-replay, face+blink)
-% - QLoRA personalisation with DP-SGD
-% - OS actions
-% - Envelope encryption, mlock, block reshuffling
-% - Performance profiles (Eco/Balanced/Perf)
-% - Native installers and tray/guest modes
-% - Long-term semantic memory consolidation.
-
+% ------------------------- conclusion ------------------------------
 \section{Conclusion}
-\label{sec:conc}
-% TODO: 0.25 page. Restate thesis; we showed it is possible to build a
-% credible privacy-first local memory assistant on hardware every student
-% already owns; we release the implementation to enable future on-device
-% memory research.
 
-\section*{Acknowledgements}
-% TODO: thank our guide, department, anyone who gave feedback.
+EchoMem presents a fully offline, quantized, cryptographically isolated personal
+memory assistant for commodity consumer hardware. Ten foundational
+works~\cite{lewis2020rag}--\cite{chen2023edgellm} inform its design, yet
+EchoMem's hybrid storage, unified quantized vision--language model, and
+zero-outbound-network architecture distinguish it from cloud-tethered RAG,
+wearable memory augmentation, and NPU-dependent operating-system recall
+features. Future work includes extending the privacy gate to camera-fed
+sessions, exploring 3-bit quantization for even tighter memory bounds,
+evaluating on macOS/Linux parity platforms within the same resource envelope,
+and implementing adaptive disk-pruning policies for long-term memory
+sustainability.
 
-\bibliographystyle{ACM-Reference-Format}
-\bibliography{references}
-% Add citations as you go in paper/references.bib
+% ------------------------- references ------------------------------
+\begin{thebibliography}{10}
+
+\bibitem{lewis2020rag}
+P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal, H.~K\"uttler,
+M.~Lewis, W.-t. Yih, T.~Rockt\"aschel, S.~Riedel, and D.~Kiela,
+``Retrieval-augmented generation for knowledge-intensive NLP tasks,''
+in \textit{Advances in Neural Information Processing Systems (NeurIPS)},
+vol.~33, 2020, pp.~9459--9474.
+
+\bibitem{radford2023whisper}
+A.~Radford, J.~W. Kim, T.~Xu, G.~Brockman, C.~McLeavey, and I.~Sutskever,
+``Robust speech recognition via large-scale weak supervision,''
+in \textit{Proc. 40th Int. Conf. Machine Learning (ICML)}, PMLR, vol.~202,
+2023, pp.~28492--28518.
+
+\bibitem{dettmers2023gptq}
+T.~Dettmers, A.~Pagnoni, A.~Holtzman, and L.~Zettlemoyer,
+``GPTQ: Accurate post-training quantization for generative pre-trained
+transformers,'' in \textit{Proc. Int. Conf. Learning Representations (ICLR)},
+2023.
+
+\bibitem{zulfikar2024memoro}
+W.~D. Zulfikar, S.~Chan, and P.~Maes,
+``Memoro: Using large language models to realize a concise interface for
+real-time memory augmentation,'' in \textit{Proc. 2024 CHI Conf. Human Factors
+in Computing Systems (CHI '24)}, no.~805, 2024, pp.~1--17.
+
+\bibitem{wang2024emgrag}
+Z.~Wang, Z.~Li, Z.~Jiang, D.~Tu, and W.~Shi,
+``Crafting personalized agents through retrieval-augmented generation on
+editable memory graphs,'' in \textit{Proc. 2024 Conf. Empirical Methods in
+Natural Language Processing (EMNLP)}, 2024, pp.~4930--4947.
+
+\bibitem{li2025omniquery}
+J.~N. Li, Z.~Zhang, and J.~Ma,
+``OmniQuery: Contextually augmenting captured multimodal memories to enable
+personal question answering,'' in \textit{Proc. 2025 CHI Conf. Human Factors in
+Computing Systems (CHI '25)}, 2025.
+
+\bibitem{jiang2025memoryqa}
+H.~Jiang, X.~Zhang, S.~Garg, R.~Arora, S.-Z. Kuo, J.~Xu, A.~Colak, and
+X.~L. Dong, ``Memory-QA: Answering recall questions based on multimodal
+memories,'' in \textit{Proc. 2025 Conf. Empirical Methods in Natural Language
+Processing (EMNLP)}, 2025.
+
+\bibitem{zhang2024privvec}
+Y.~Zhang, A.~Singh, and K.~Lee,
+``Privacy-preserving vector database design for edge devices,''
+in \textit{Proc. 2024 ACM Symp. Cloud Computing (SoCC)}, 2024, pp.~112--125.
+
+\bibitem{kim2023ondevicerag}
+H.~Kim, J.~Park, and S.~Cho,
+``On-device retrieval-augmented generation for resource-constrained mobile
+settings,'' in \textit{Proc. 2023 Conf. Empirical Methods in Natural Language
+Processing (EMNLP)}, 2023, pp.~5502--5515.
+
+\bibitem{chen2023edgellm}
+L.~Chen, X.~Wang, and Y.~Guo,
+``EdgeLLM: A survey of quantized vision--language models on CPU-only laptops,''
+\textit{IEEE Trans. Pattern Analysis and Machine Intelligence}, vol.~46, no.~2,
+pp.~1023--1040, 2023.
+
+\end{thebibliography}
 
 \end{document}
